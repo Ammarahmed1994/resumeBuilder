@@ -1,6 +1,7 @@
 const MongoClient = require("mongodb").MongoClient;
 const ObjectId = require("mongodb").ObjectId;
 
+//check if user exists
 exports.checkIfUserExists = (username) => {
   return new Promise(async (resolve, reject) => {
     try {
