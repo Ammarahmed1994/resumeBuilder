@@ -9,10 +9,14 @@ let fs = require("fs");
 let jwt = require("jsonwebtoken");
 // const path = require("path");
 
-const ResumeBuilderService = require(`./libs/index`);
-// const { ErrorHandler } = require(`./utils/ErrorHandler`);
+const userService = require(`./libs/userLibs/index`);
+const profileService = require(`./libs/profileLibs/index`);
+const educationService = require(`./libs/educationLibs/index`);
+const experienceService = require(`./libs/experienceLibs/index`);
+// const ErrorHandler = require(`./utils/ErrorHandler`);
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 // app.use(express.static(path.join(__dirname)));
 
@@ -38,10 +42,8 @@ app.get("/", (req, res) => {
   res.end("Hello World!");
 });
 
-app.get(`/signup`, async (req, res) => {
-  const isUserExists = await ResumeBuilderService.checkIfUserExists(
-    req.body.username
-  );
+app.post(`/signup`, async (req, res) => {
+  const isUserExists = await userService.checkIfUserExists(req.body.username);
 
   if (isUserExists)
     res.status(403).json({
@@ -54,7 +56,8 @@ app.get(`/signup`, async (req, res) => {
   userData.password = await hashPassword(req.body.password);
   userData.token = await generateToken(req.body.username, req.body.password);
 
-  await ResumeBuilderService.signUp(userData)
+  await userService
+    .signUp(userData)
     .then(() => {
       res.status(200).json({
         status: `SUCCESS`,
@@ -62,15 +65,18 @@ app.get(`/signup`, async (req, res) => {
       });
     })
     .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to get sign up`,
+      });
     });
 });
 
-app.get(`/login`, async (req, res) => {
-  let user = await ResumeBuilderService.checkIfUserExists(req.body.username);
+app.post(`/login`, async (req, res) => {
+  let user = await userService.checkIfUserExists(req.body.username);
 
   if (!user)
-    res.status(403).json({
+    return res.status(403).json({
       status: `FAILED`,
       message: `This user does not exist, please signup first`,
     });
@@ -78,30 +84,35 @@ app.get(`/login`, async (req, res) => {
   let enteredPassword = await hashPassword(req.body.password);
 
   if (enteredPassword !== user.password)
-    res.status(403).json({
+    return res.status(403).json({
       status: `FAILED`,
       message: `Please enter a vaild password`,
     });
 
   user.token = await generateToken(req.body.username, req.body.password);
 
-  await ResumeBuilderService.updatedUser(user);
+  await userService.updatedUser(user);
 
-  await ResumeBuilderService.getUserById(user._id)
+  await userService
+    .getUserById(user._id)
     .then((user) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Got User details by Id.`,
+        message: `Succesfully logged in`,
         data: { user },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to get login`,
+      });
     });
 });
 
 app.get(`/list`, async (req, res) => {
-  await ResumeBuilderService.getUserList()
+  await userService
+    .getUserList()
     .then((users) => {
       res.status(200).json({
         status: `SUCCESS`,
@@ -114,21 +125,9 @@ app.get(`/list`, async (req, res) => {
     });
 });
 
-app.post(`/create`, async (req, res) => {
-  await ResumeBuilderService.createUser(req.body)
-    .then(() => {
-      res.status(200).json({
-        status: `SUCCESS`,
-        message: `Successfully created user`,
-      });
-    })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
-    });
-});
-
 app.put(`/update`, async (req, res) => {
-  await ResumeBuilderService.updatedUser(req.body)
+  await userService
+    .updatedUser(req.body)
     .then((user) => {
       res.status(200).json({
         status: `SUCCESS`,
@@ -142,7 +141,8 @@ app.put(`/update`, async (req, res) => {
 });
 
 app.get(`/userDetails`, async (req, res) => {
-  await ResumeBuilderService.getUserById(req.body._id)
+  await userService
+    .getUserById(req.body._id)
     .then((user) => {
       res.status(200).json({
         status: `SUCCESS`,
@@ -156,11 +156,34 @@ app.get(`/userDetails`, async (req, res) => {
 });
 
 app.post(`/addProfile`, async (req, res) => {
-  await ResumeBuilderService.addUserProfile(req.body)
-    .then(() => {
+  const profileInfo = await profileService.addUserProfile(req.body);
+
+  await profileService
+    .getUserProfileById(profileInfo.insertedId)
+    .then((userInfo) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully added user profile`,
+        message: `Succesfully added user info`,
+        data: { userInfo },
+      });
+    })
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to add profile info`,
+      });
+    });
+});
+
+//update user profile info
+app.put(`/updateProfile`, async (req, res) => {
+  await profileService
+    .updateUserProfile(req.body)
+    .then((userInfo) => {
+      res.status(200).json({
+        status: `SUCCESS`,
+        message: `Successfully updated user profile`,
+        data: { userInfo },
       });
     })
     .catch((err) => {
@@ -168,53 +191,106 @@ app.post(`/addProfile`, async (req, res) => {
     });
 });
 
-app.put(`/updateProfile`, async (req, res) => {
-  await ResumeBuilderService.updateUserProfile(req.body)
-    .then((user) => {
+//get user profile info
+app.get(`/getUserProfile`, async (req, res) => {
+  await profileService
+    .getUserProfileById(req.query.userId)
+    .then((userInfo) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully updated user profile`,
-        data: { user },
+        message: `Succesfully got user info`,
+        data: { userInfo },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to get profile info`,
+      });
     });
 });
 
 app.post(`/addEducation`, async (req, res) => {
-  await ResumeBuilderService.addUserEducation(req.body)
-    .then(() => {
+  const educationInfo = await educationService.addUserEducation(req.body);
+
+  await educationService
+    .getUserEducationById(educationInfo.insertedId)
+    .then((userEducation) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully added user education`,
+        message: `Succesfully added user education`,
+        data: { userEducation },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to add user education`,
+      });
     });
 });
 
 app.put(`/updateEducation`, async (req, res) => {
-  await ResumeBuilderService.updateUserEducation(req.body)
-    .then((user) => {
+  await educationService
+    .updateUserEducation(req.body)
+    .then((userEducation) => {
       res.status(200).json({
         status: `SUCCESS`,
         message: `Successfully updated user education`,
-        data: { user },
+        data: { userEducation },
       });
     })
     .catch((err) => {
       ErrorHandler.handleServerError(req, err, res);
+    });
+});
+
+app.get(`/getUserEducation`, async (req, res) => {
+  await educationService
+    .getUserEducationById(req.query.userId)
+    .then((userEducation) => {
+      res.status(200).json({
+        status: `SUCCESS`,
+        message: `Succesfully got user education`,
+        data: { userEducation },
+      });
+    })
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to get education info`,
+      });
     });
 });
 
 app.post(`/addExperience`, async (req, res) => {
-  await ResumeBuilderService.addUserExperience(req.body)
-    .then(() => {
+  const eexperienceInfo = await experienceService.addUserExperience(req.body);
+
+  await experienceService
+    .getUserExperienceById(eexperienceInfo.insertedId)
+    .then((userExperience) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully added user experience`,
+        message: `Succesfully added user Experience`,
+        data: { userExperience },
+      });
+    })
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to add user Experience`,
+      });
+    });
+});
+
+app.put(`/updateExperience`, async (req, res) => {
+  await experienceService
+    .updateUserExperience(req.body)
+    .then((userExperience) => {
+      res.status(200).json({
+        status: `SUCCESS`,
+        message: `Successfully updated user experience`,
+        data: { userExperience },
       });
     })
     .catch((err) => {
@@ -222,17 +298,21 @@ app.post(`/addExperience`, async (req, res) => {
     });
 });
 
-app.put(`/updateExperience`, async (req, res) => {
-  await ResumeBuilderService.updateUserExperience(req.body)
-    .then((user) => {
+app.get(`/getUserExperience`, async (req, res) => {
+  await experienceService
+    .getUserExperienceById(req.query.userId)
+    .then((userExperience) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully updated user experience`,
-        data: { user },
+        message: `Succesfully got user experience`,
+        data: { userExperience },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to get experience info`,
+      });
     });
 });
 
