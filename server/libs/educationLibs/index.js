@@ -53,7 +53,30 @@ exports.updateUserEducation = (userEducation) => {
 };
 
 // get user education by Id
-exports.getUserEducationById = (userId) => {
+exports.getUserEducationById = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      MongoClient.connect(
+        process.env.MONGODB_URI,
+        async function (err, client) {
+          if (err) throw err;
+
+          const db = client.db("resumeBuilder");
+          const userEducation = await db
+            .collection("userEducation")
+            .findOne({ _id: ObjectId(id) });
+
+          resolve(userEducation);
+        }
+      );
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+// get user education by user Id
+exports.getUserEducationByUserId = (userId) => {
   return new Promise(async (resolve, reject) => {
     try {
       MongoClient.connect(

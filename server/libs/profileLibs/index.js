@@ -51,7 +51,30 @@ exports.updateUserProfile = (userProfile) => {
 };
 
 // get user profile by Id
-exports.getUserProfileById = (userId) => {
+exports.getUserProfileById = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      MongoClient.connect(
+        process.env.MONGODB_URI,
+        async function (err, client) {
+          if (err) throw err;
+
+          const db = client.db("resumeBuilder");
+          const userProfile = await db
+            .collection("userProfile")
+            .findOne({ _id: ObjectId(id) });
+
+          resolve(userProfile);
+        }
+      );
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+// get user profile by user Id
+exports.getUserProfileByUserId = (userId) => {
   return new Promise(async (resolve, reject) => {
     try {
       MongoClient.connect(

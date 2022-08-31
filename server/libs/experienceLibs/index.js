@@ -51,7 +51,30 @@ exports.updateUserExperience = (userExperience) => {
 };
 
 // get user experience by Id
-exports.getUserExperienceById = (userId) => {
+exports.getUserExperienceById = (id) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      MongoClient.connect(
+        process.env.MONGODB_URI,
+        async function (err, client) {
+          if (err) throw err;
+
+          const db = client.db("resumeBuilder");
+          const userExperience = await db
+            .collection("userExperience")
+            .findOne({ _id: ObjectId(id) });
+
+          resolve(userExperience);
+        }
+      );
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+// get user experience by user Id
+exports.getUserExperienceByUserId = (userId) => {
   return new Promise(async (resolve, reject) => {
     try {
       MongoClient.connect(

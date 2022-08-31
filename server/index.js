@@ -14,7 +14,7 @@ const profileService = require(`./libs/profileLibs/index`);
 const educationService = require(`./libs/educationLibs/index`);
 const experienceService = require(`./libs/experienceLibs/index`);
 const helperService = require(`./common/helper.service`);
-// const ErrorHandler = require(`./utils/ErrorHandler`);
+const ErrorHandler = require(`./utils/ErrorHandler`);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -166,24 +166,29 @@ app.post(`/addProfile`, async (req, res) => {
 
 //update user profile info
 app.put(`/updateProfile`, async (req, res) => {
+  const updateProfile = await profileService.updateUserProfile(req.body);
+
   await profileService
-    .updateUserProfile(req.body)
+    .getUserProfileById(updateProfile.value._id)
     .then((userInfo) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully updated user profile`,
+        message: `Succesfully updated user info`,
         data: { userInfo },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to update profile info`,
+      });
     });
 });
 
 //get user profile info
 app.get(`/getUserProfile`, async (req, res) => {
   await profileService
-    .getUserProfileById(req.query.userId)
+    .getUserProfileByUserId(req.query.userId)
     .then((userInfo) => {
       res.status(200).json({
         status: `SUCCESS`,
@@ -220,23 +225,28 @@ app.post(`/addEducation`, async (req, res) => {
 });
 
 app.put(`/updateEducation`, async (req, res) => {
+  const updateEducation = await educationService.updateUserEducation(req.body);
+
   await educationService
-    .updateUserEducation(req.body)
+    .getUserEducationById(updateEducation.value._id)
     .then((userEducation) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully updated user education`,
+        message: `Succesfully updated user education`,
         data: { userEducation },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to update user education`,
+      });
     });
 });
 
 app.get(`/getUserEducation`, async (req, res) => {
   await educationService
-    .getUserEducationById(req.query.userId)
+    .getUserEducationByUserId(req.query.userId)
     .then((userEducation) => {
       res.status(200).json({
         status: `SUCCESS`,
@@ -273,23 +283,30 @@ app.post(`/addExperience`, async (req, res) => {
 });
 
 app.put(`/updateExperience`, async (req, res) => {
+  const updateExperience = await experienceService.updateUserExperience(
+    req.body
+  );
+
   await experienceService
-    .updateUserExperience(req.body)
+    .getUserExperienceById(updateExperience.value._id)
     .then((userExperience) => {
       res.status(200).json({
         status: `SUCCESS`,
-        message: `Successfully updated user experience`,
+        message: `Succesfully updated user Experience`,
         data: { userExperience },
       });
     })
-    .catch((err) => {
-      ErrorHandler.handleServerError(req, err, res);
+    .catch(() => {
+      res.status(403).json({
+        status: `Failed`,
+        message: `failed to update user Experience`,
+      });
     });
 });
 
 app.get(`/getUserExperience`, async (req, res) => {
   await experienceService
-    .getUserExperienceById(req.query.userId)
+    .getUserExperienceByUserId(req.query.userId)
     .then((userExperience) => {
       res.status(200).json({
         status: `SUCCESS`,
