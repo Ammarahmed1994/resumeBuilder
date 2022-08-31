@@ -13,30 +13,13 @@ const userService = require(`./libs/userLibs/index`);
 const profileService = require(`./libs/profileLibs/index`);
 const educationService = require(`./libs/educationLibs/index`);
 const experienceService = require(`./libs/experienceLibs/index`);
+const helperService = require(`./common/helper.service`);
 // const ErrorHandler = require(`./utils/ErrorHandler`);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 // app.use(express.static(path.join(__dirname)));
-
-const hashPassword = (password) => {
-  const hash = crypto.createHash("md5").update(password).digest("hex");
-  return hash;
-};
-
-const generateToken = async (userName, password) => {
-  let privateKey = await fs.readFileSync("config/privetkey.pem");
-  let token = await jwt.sign(
-    {
-      userName: userName,
-      password: password,
-    },
-    privateKey,
-    { algorithm: "RS256" }
-  );
-  return token;
-};
 
 app.get("/", (req, res) => {
   res.end("Hello World!");
@@ -53,8 +36,11 @@ app.post(`/signup`, async (req, res) => {
 
   let userData = { ...req.body };
 
-  userData.password = await hashPassword(req.body.password);
-  userData.token = await generateToken(req.body.username, req.body.password);
+  userData.password = await helperService.hashPassword(req.body.password);
+  userData.token = await helperService.generateToken(
+    req.body.username,
+    req.body.password
+  );
 
   await userService
     .signUp(userData)
@@ -81,7 +67,7 @@ app.post(`/login`, async (req, res) => {
       message: `This user does not exist, please signup first`,
     });
 
-  let enteredPassword = await hashPassword(req.body.password);
+  let enteredPassword = await helperService.hashPassword(req.body.password);
 
   if (enteredPassword !== user.password)
     return res.status(403).json({
@@ -89,7 +75,10 @@ app.post(`/login`, async (req, res) => {
       message: `Please enter a vaild password`,
     });
 
-  user.token = await generateToken(req.body.username, req.body.password);
+  user.token = await helperService.generateToken(
+    req.body.username,
+    req.body.password
+  );
 
   await userService.updatedUser(user);
 
