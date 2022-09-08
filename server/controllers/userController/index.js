@@ -1,5 +1,6 @@
 const userService = require(`../../services/userServices/index`);
 const helperService = require(`../../common/helper.service`);
+let bcrypt = require("bcryptjs");
 
 exports.signUP = async (req, res) => {
   const isUserExists = await userService.checkIfUserExists(req.body.username);
@@ -43,9 +44,9 @@ exports.login = async (req, res) => {
       message: `This user does not exist, please signup first`,
     });
 
-  let enteredPassword = await helperService.hashPassword(req.body.password);
+  var passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
 
-  if (enteredPassword !== user.password)
+  if (!passwordIsValid)
     return res.status(403).json({
       status: `FAILED`,
       message: `Please enter a vaild password`,

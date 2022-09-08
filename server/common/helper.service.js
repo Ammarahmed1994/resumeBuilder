@@ -1,10 +1,9 @@
-const crypto = require("crypto");
-
 let fs = require("fs");
 let jwt = require("jsonwebtoken");
+let bcrypt = require("bcryptjs");
 
 exports.hashPassword = (password) => {
-  const hash = crypto.createHash("md5").update(password).digest("hex");
+  const hash = bcrypt.hashSync(password, 10);
   return hash;
 };
 
